@@ -6,12 +6,13 @@ The Sidecar aims to provide a managed Wine or Proton environment, per-title conf
 
 ## Project status
 
-Early CLI implementation. It can register an existing Windows release, inspect Wine/Proton availability, initialize a per-title prefix, and launch the player with logs. Build in a Windows installation or VM using XboxXBERecomp's expected workflow; see [the quickstart](docs/quickstart.md) and [the architecture plan](docs/architecture-plan.md).
+Early CLI implementation. It can register an existing Windows release, inspect Wine/UMU availability, initialize a per-title prefix, launch the player with logs, and package a staged release as a Linux launcher archive. Build in a Windows installation or VM using XboxXBERecomp's expected workflow; see [the quickstart](docs/quickstart.md), [packaging notes](docs/packaging.md), and [the architecture plan](docs/architecture-plan.md).
 
 ## Intended workflows
 
 1. **Build and run:** build in Windows or a Windows VM using XboxXBERecomp's supported toolchain, then launch the resulting Windows player in an isolated Wine or Proton environment on Linux.
 2. **Run an existing build:** register an already-built XboxXBERecomp Windows player and launch it with the same managed runtime, prefix, settings, and per-title data directories.
+3. **Package for Linux:** assemble staged Windows release files into a Linux launcher archive. The current archive expects Python and UMU/Wine on the host.
 
 ## Principles
 

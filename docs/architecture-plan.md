@@ -116,9 +116,9 @@ The current UMU implementation uses XDG data directories for its Proton/runtime 
 ### 0. Feasibility spike
 
 - Choose one representative title project and the upstream XboxXBERecomp revision.
-- Follow upstream instructions manually on Linux with Wine and separately test the resulting player.
+- Build using upstream instructions in Windows/VM, then test the resulting player through Wine and Proton on Linux.
 - Record every Windows tool, runtime dependency, environment variable, path assumption, and failure.
-- Compare Wine and Proton viability for both build and run. Determine whether Proton can execute the build toolchain outside Steam with acceptable complexity.
+- Compare Wine and Proton/UMU viability for running; the Windows VM is the build environment.
 - Define the first supported distro and a measurable “works” checklist.
 
 #### Source review: upstream Windows build flow
@@ -143,11 +143,18 @@ Consequences for Sidecar:
 #### Recommended implementation direction
 
 1. Use a user-provided Windows installation/VM as the initial build backend and run the upstream `build.bat` unchanged there. This preserves the expected Visual Studio layout and Windows SDK/toolchain.
-2. Place the resulting Windows release files in a Linux title workspace (a shared folder can avoid manual copying), then let Sidecar initialize an isolated Wine prefix and run the Windows player. The title assets remain user-provided.
-3. Deliver this Wine run path first, including runner discovery, prefix setup, launch arguments, working directory, diagnostics, and logs. A user with an existing `.exe` should get value without configuring a VM.
-4. Consider automating VM build/handoff later (for example, through a guest agent or shared-folder contract). Only pursue Linux-hosted Windows cross-compilation if it materially improves the workflow; it requires a CMake/toolchain overlay and remains unproven.
+2. Place the resulting Windows release files in a Linux title workspace (a shared folder can avoid manual copying), then let Sidecar initialize an isolated Proton/UMU prefix and run the Windows player. Plain Wine remains a fallback; title assets remain user-provided.
+3. Deliver this Proton/UMU run path first, including runner discovery, prefix setup, launch arguments, working directory, diagnostics, and logs. A user with an existing `.exe` should get value without configuring a VM.
+4. Package the staged Windows release with a Linux launcher while keeping game assets and machine-specific state out of the archive.
+5. Consider automating VM build/handoff later (for example, through a guest agent or shared-folder contract). The user plans to set up and remote into the Windows development VM later; the host type and access protocol are not selected yet. Only pursue Linux-hosted Windows cross-compilation if it materially improves the workflow; it requires a CMake/toolchain overlay and remains unproven.
 
 Primary source references: [upstream `build.bat`](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/build.bat), [upstream `CMakePresets.json`](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/CMakePresets.json), [upstream `XbeRecomp.cmake`](https://github.com/TGP482/XboxXBERecomp/blob/main/cmake/XbeRecomp.cmake), and [upstream game-template instructions](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/README.md).
+
+#### Alternative considered: sp00nznet/xboxrecomp
+
+[sp00nznet/xboxrecomp](https://github.com/sp00nznet/xboxrecomp) is a separate static recompilation toolkit with a real Linux build path. Its game template builds with GCC/Clang and uses SDL2/OpenGL for Linux. It does not consume XboxXBERecomp projects or their Windows executables: it has its own XBE analysis/recompile pipeline, runtime libraries, title template, and game-specific integration. Its [getting-started guide](https://github.com/sp00nznet/xboxrecomp/blob/main/docs/GETTING_STARTED.md) describes the Linux OpenGL backend as less complete than its Windows D3D11 path. Burnout 3 is its proven reference title; that does not establish compatibility with another target title. The toolkit is MIT-licensed and includes notices/licenses for LGPL xemu-derived components.
+
+For the current Sidecar goal—build with XboxXBERecomp as-is in Windows and package its output for Linux—the sidecar route preserves the existing build and game integration. Switching to sp00nznet/xboxrecomp would be a migration to a different recompiler/runtime, not a shortcut for running the existing `.exe`. Re-evaluate it if the requirement changes to a native Linux executable and the target title can be migrated and validated against its OpenGL backend.
 
 **Exit criteria:** repeatable manual build and launch on a clean Linux install, or a documented blocker that narrows the supported workflow.
 
@@ -155,9 +162,10 @@ Primary source references: [upstream `build.bat`](https://github.com/TGP482/Xbox
 
 - Create a versioned title manifest and validation.
 - Implement `runners`, `doctor`, `init`, `setup`, `build`, and `run`.
-- Implement Wine runner discovery and per-title prefix management.
+- Implement UMU/Proton runner discovery and per-title prefix management, with Wine fallback.
 - Make `run` work for an existing Windows release before tying it to a Sidecar build.
 - Build support documents the Windows VM handoff and validates the resulting files; upstream build execution remains inside Windows for the first milestone.
+- Add a Linux archive builder for staged release files, excluding game assets and per-user state.
 - Capture logs and preserve exit codes; add backup/reset commands.
 
 **Exit criteria:** a user can prepare the known test title, build it from their own files, and launch it without manually editing Wine prefixes.

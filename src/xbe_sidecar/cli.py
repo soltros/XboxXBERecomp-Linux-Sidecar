@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
+from .bundle import BundleError, create_bundle
 from .manifest import (
     ManifestError,
     create_manifest,
@@ -77,7 +78,7 @@ def _get_runner(data: dict):
     section = data["runner"]
     runner = discover(section["type"], section.get("executable"))
     if runner is None:
-        variable = "WINE" if section["type"] == "wine" else "PROTON"
+        variable = "WINE" if section["type"] == "wine" else "UMU_RUN"
         raise SidecarError(
             f"Could not find {section['type']} runner. Set [runner].executable in sidecar.toml "
             f"or the {variable} environment variable."
@@ -210,6 +211,19 @@ def command_run(args: argparse.Namespace) -> int:
     return _print_process(command, working, env, _log_path(data, "run"))
 
 
+def command_bundle(args: argparse.Namespace) -> int:
+    try:
+        data = load_manifest(args.workspace.expanduser())
+        output = create_bundle(data, args.output)
+    except (ManifestError, BundleError) as exc:
+        raise SidecarError(str(exc)) from exc
+    except OSError as exc:
+        raise SidecarError(f"Could not create bundle: {exc}") from exc
+    print(f"Created Linux launcher archive: {output}")
+    print("The archive excludes game assets and Wine/Proton runtime files.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xbe-sidecar",
@@ -243,6 +257,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("workspace", type=Path)
     run.add_argument("arguments", nargs=argparse.REMAINDER, help="arguments forwarded to the Windows player")
     run.set_defaults(handler=command_run)
+
+    bundle = sub.add_parser("bundle", help="package a Windows release with a Linux launcher")
+    bundle.add_argument("workspace", type=Path)
+    bundle.add_argument("--output", required=True, type=Path, help="destination .tar.gz path")
+    bundle.set_defaults(handler=command_bundle)
     return parser
 
 

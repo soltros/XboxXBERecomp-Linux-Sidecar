@@ -163,3 +163,44 @@ def get_player_path(data: dict[str, Any]) -> Path:
 
 def get_working_directory(data: dict[str, Any]) -> Path:
     return resolve_workspace_path(data, data["player"].get("working_directory", "."))
+
+
+def write_bundle_manifest(workspace: Path, data: dict[str, Any], executable_name: str) -> Path:
+    """Write a sanitized manifest for a relocatable title bundle."""
+    name = data["title"]["name"]
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "title"
+    identity = hashlib.sha256(f"{data['_workspace']}\0{name}".encode("utf-8")).hexdigest()[:10]
+    data_root = f"$XDG_DATA_HOME/xbe-sidecar/{slug}-{identity}"
+    state_root = f"$XDG_STATE_HOME/xbe-sidecar/{slug}-{identity}"
+    runner = data["runner"]
+    lines = [
+        "[title]",
+        f"name = {_toml_string(name)}",
+        "",
+        "[runner]",
+        f"type = {_toml_string(runner['type'])}",
+    ]
+    proton_path = runner.get("proton_path")
+    if proton_path and "/" not in proton_path and "\\" not in proton_path and not proton_path.startswith("~"):
+        lines.append(f"proton_path = {_toml_string(proton_path)}")
+    lines.extend(
+        [
+            "",
+            "[prefix]",
+            f"path = {_toml_string(data_root + '/prefix')}",
+            "",
+            "[storage]",
+            f"state = {_toml_string(state_root)}",
+            "",
+            "[player]",
+            f"executable = {_toml_string(executable_name)}",
+            'working_directory = "."',
+            "arguments = " + json.dumps(data["player"].get("arguments", []), ensure_ascii=False),
+            "",
+            "[environment]",
+            "",
+        ]
+    )
+    manifest = workspace / MANIFEST_NAME
+    manifest.write_text("\n".join(lines), encoding="utf-8")
+    return manifest
