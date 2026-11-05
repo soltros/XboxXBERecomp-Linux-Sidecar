@@ -24,6 +24,7 @@ def create_manifest(
     executable: str,
     runner: str,
     runner_executable: str | None,
+    proton_path: str | None,
 ) -> Path:
     manifest = workspace / MANIFEST_NAME
     if manifest.exists():
@@ -38,6 +39,8 @@ def create_manifest(
     ]
     if runner_executable:
         lines.append(f"executable = {_toml_string(runner_executable)}")
+    if proton_path:
+        lines.append(f"proton_path = {_toml_string(proton_path)}")
     lines.extend(
         [
             "",
@@ -75,6 +78,10 @@ def load_manifest(path: Path) -> dict[str, Any]:
         raise ManifestError("[title].name must be a string")
     if not isinstance(runner, dict) or runner.get("type") not in {"wine", "proton"}:
         raise ManifestError('[runner].type must be "wine" or "proton"')
+    if "executable" in runner and not isinstance(runner["executable"], str):
+        raise ManifestError("[runner].executable must be a string")
+    if "proton_path" in runner and not isinstance(runner["proton_path"], str):
+        raise ManifestError("[runner].proton_path must be a string")
     if not isinstance(prefix, dict) or not isinstance(prefix.get("path"), str):
         raise ManifestError("[prefix].path must be a string")
     if not isinstance(player, dict) or not isinstance(player.get("executable"), str):

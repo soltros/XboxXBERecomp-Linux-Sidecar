@@ -25,34 +25,12 @@ def _resolve_candidate(candidate: str | None) -> Path | None:
     return Path(located).resolve() if located else None
 
 
-def proton_candidates() -> list[Path]:
-    home = Path.home()
-    roots = [
-        home / ".steam/steam/steamapps/common",
-        home / ".local/share/Steam/steamapps/common",
-        home / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common",
-    ]
-    found: list[Path] = []
-    for root in roots:
-        if not root.is_dir():
-            continue
-        try:
-            found.extend(path / "proton" for path in root.glob("Proton*") if (path / "proton").is_file())
-        except OSError:
-            continue
-    return sorted(set(path.resolve() for path in found))
-
-
 def discover(kind: str, configured: str | None = None) -> Runner | None:
     if kind == "wine":
         executable = _resolve_candidate(configured or os.environ.get("WINE") or "wine")
     else:
-        executable = _resolve_candidate(configured or os.environ.get("PROTON"))
-        if executable is None:
-            for candidate in proton_candidates():
-                if os.access(candidate, os.X_OK):
-                    executable = candidate
-                    break
+        # Standalone Proton needs the Steam Linux Runtime setup supplied by umu-run.
+        executable = _resolve_candidate(configured or os.environ.get("UMU_RUN") or "umu-run")
     return Runner(kind, executable) if executable else None
 
 
@@ -64,21 +42,11 @@ def runner_environment(data: dict, runner: Runner) -> dict[str, str]:
         env["WINEPREFIX"] = str(prefix)
         env.setdefault("WINEARCH", "win64")
     else:
-        env["STEAM_COMPAT_DATA_PATH"] = str(prefix)
-        steam_root = next(
-            (
-                candidate
-                for candidate in (
-                    Path.home() / ".steam/steam",
-                    Path.home() / ".local/share/Steam",
-                    Path.home() / ".var/app/com.valvesoftware.Steam/.local/share/Steam",
-                )
-                if candidate.is_dir()
-            ),
-            None,
-        )
-        if steam_root:
-            env.setdefault("STEAM_COMPAT_CLIENT_INSTALL_PATH", str(steam_root))
+        env["WINEPREFIX"] = str(prefix)
+        env.setdefault("GAMEID", "umu-default")
+        proton_path = data["runner"].get("proton_path")
+        if proton_path:
+            env["PROTONPATH"] = str(Path(proton_path).expanduser())
     return env
 
 
@@ -95,8 +63,8 @@ def setup_command(runner: Runner, data: dict) -> list[str]:
         if not wineboot:
             wineboot = str(runner.executable.with_name("wineboot"))
         return [wineboot, "-u"]
-    # Proton initializes the compatibility prefix as part of its normal run path.
-    return [str(runner.executable), "run", "cmd.exe", "/c", "exit", "0"]
+    # umu-run initializes a prefix when passed an empty executable.
+    return [str(runner.executable), ""]
 
 
 def launch_command(
@@ -104,10 +72,12 @@ def launch_command(
 ) -> list[str]:
     if runner.kind == "wine":
         return [str(runner.executable), str(executable), *arguments]
-    return [str(runner.executable), "run", str(executable), *arguments]
+    return [str(runner.executable), str(executable), *arguments]
 
 
 def runner_version(runner: Runner) -> str:
+    if runner.kind == "proton":
+        return "umu-managed Proton/runtime"
     args = [str(runner.executable), "--version"]
     try:
         result = subprocess.run(args, capture_output=True, text=True, timeout=10, check=False)

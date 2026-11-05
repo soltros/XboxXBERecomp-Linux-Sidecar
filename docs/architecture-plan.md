@@ -62,7 +62,7 @@ Do not put credentials or proprietary game data in the manifest. Validate paths 
 
 ### Runner adapter
 
-Define a narrow interface for `discover`, `install-or-select`, `create-prefix`, `run-command`, `diagnostics`, and `version`. Implement Wine first because its standalone invocation and prefix model form the simplest baseline. Add Proton as a separate adapter after a working target runtime and its Steam Runtime/pressure-vessel needs are defined. Do not assume that calling `proton run` alone makes Proton portable outside Steam.
+Define a narrow interface for `discover`, `install-or-select`, `create-prefix`, `run-command`, `diagnostics`, and `version`. Implement Wine first because its standalone invocation and prefix model form the simplest baseline. For standalone Proton, invoke it through `umu-run`, which provides the required Steam Linux Runtime environment outside Steam and manages a Proton/runtime cache. Do not call a Proton script directly and assume the Steam Runtime setup is unnecessary. See the [umu-run manual](https://github.com/Open-Wine-Components/umu-launcher/blob/main/docs/umu.1.scd).
 
 Allow user-managed runners initially. The product can later offer downloadable runner bundles if licensing, update security, and runtime dependencies are settled.
 
@@ -93,7 +93,7 @@ The goal is an easy-to-run Linux package, but “single self-contained blob” i
 
 1. **MVP:** native Sidecar package plus a user-selected, locally installed Wine runner.
 2. **Portable bundle:** Sidecar plus a supported Wine build and required runtime libraries, subject to license and distribution review.
-3. **Proton bundle/adapter:** a pinned Proton build with the runtime/container pieces it requires, tested outside Steam on supported distributions.
+3. **Proton bundle/adapter:** use `umu-run` with a pinned Proton build and its runtime/container pieces, tested outside Steam on supported distributions.
 4. **Single-file convenience:** optional self-extracting archive or AppImage-like launcher that unpacks a versioned runtime into the user's data directory. Keep runtime updates separate from title data and verify downloaded artifacts.
 
 Never claim a runtime is self-contained until a clean-machine test confirms it has no undeclared host dependencies. Do not bundle Microsoft's redistributables or proprietary game files without a clear redistribution right.

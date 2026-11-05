@@ -14,8 +14,10 @@ xbe-sidecar setup /path/to/title-release
 xbe-sidecar run /path/to/title-release
 ```
 
-To use Proton, initialize the workspace with `--runner proton`. Set `PROTON=/path/to/proton` if the Proton script is not discoverable in a Steam library. Proton outside Steam is experimental; `doctor` reports when a Steam runtime may be missing.
+To use Proton, install `umu-launcher` and initialize with `--runner proton`. Sidecar uses `umu-run` so Proton can run outside Steam with the Steam Linux Runtime. If `umu-run` is not on `PATH`, set `UMU_RUN=/path/to/umu-run` or use `--runner-executable`. To pin a Proton build, add `--proton-path /path/to/Proton` (or a supported Proton codename). Otherwise umu selects its default Proton build and may download it and the required runtime on first launch.
 
 Each title gets a separate prefix in `.sidecar/prefix` and timestamped output logs in `.sidecar/logs`. The prefix can be deleted to reset that title's Windows state; this does not delete the game files or executable. Back up saves/settings stored inside the prefix before resetting it.
 
-This workflow runs the Windows release through Wine/Proton. It is not a native Linux game executable. A portable bundle containing a pinned Wine/Proton runtime is planned separately and must be verified for redistribution rights and host-library requirements.
+This workflow runs the Windows release through Wine/Proton. It is not a native Linux game executable. `umu-run` manages its Proton/runtime cache under the user's data directory. A portable bundle containing pinned runner and runtime files is planned separately and must be verified for redistribution rights and host-library requirements.
+
+Proton adapter details follow the [umu-run manual](https://github.com/Open-Wine-Components/umu-launcher/blob/main/docs/umu.1.scd), including its `WINEPREFIX`, `PROTONPATH`, and prefix-initialization behavior.

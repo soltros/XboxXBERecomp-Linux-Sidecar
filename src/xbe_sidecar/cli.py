@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import platform
 import shlex
 import subprocess
@@ -22,7 +21,6 @@ from .runners import (
     discover,
     launch_command,
     prefix_ready,
-    proton_candidates,
     runner_environment,
     runner_version,
     setup_command,
@@ -118,6 +116,7 @@ def command_init(args: argparse.Namespace) -> int:
             executable=args.exe,
             runner=args.runner,
             runner_executable=args.runner_executable,
+            proton_path=args.proton_path,
         )
     except ManifestError as exc:
         raise SidecarError(str(exc)) from exc
@@ -134,15 +133,11 @@ def command_runners(_: argparse.Namespace) -> int:
         print(f"Wine:   {wine.executable} ({runner_version(wine)})")
     else:
         print("Wine:   not found")
-    protons = proton_candidates()
     proton_env = discover("proton")
     if proton_env:
-        print(f"Proton: {proton_env.executable}")
-    elif protons:
-        for path in protons:
-            print(f"Proton: {path}")
+        print(f"Proton:  via {proton_env.executable} (umu-run)")
     else:
-        print("Proton: not found (set PROTON or install a Steam Proton version)")
+        print("Proton:  umu-run not found (install umu-launcher)")
     return 0
 
 
@@ -172,11 +167,8 @@ def command_doctor(args: argparse.Namespace) -> int:
     compiler = data["_workspace"] / "compiler"
     print(f"Assets dir:  {assets} ({'found' if assets.is_dir() else 'not found'})")
     print(f"Compiler:    {compiler} ({'found' if compiler.is_dir() else 'not found'})")
-    if data["runner"]["type"] == "proton" and not (
-        "STEAM_COMPAT_CLIENT_INSTALL_PATH" in os.environ
-        or any(p.is_dir() for p in (Path.home() / ".steam/steam", Path.home() / ".local/share/Steam"))
-    ):
-        print("Notice:      Proton may require a Steam installation/runtime for standalone use.")
+    if data["runner"]["type"] == "proton":
+        print("Proton:      managed by umu-run (Steam not required)")
     return 0 if runner and player.is_file() and working.is_dir() else 1
 
 
@@ -226,7 +218,8 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--name")
     init.add_argument("--exe", required=True, help="player executable, relative to workspace or absolute")
     init.add_argument("--runner", choices=("wine", "proton"), default="wine")
-    init.add_argument("--runner-executable", help="explicit Wine binary or Proton script")
+    init.add_argument("--runner-executable", help="explicit Wine binary or umu-run executable")
+    init.add_argument("--proton-path", help="Proton path or codename for umu-run")
     init.set_defaults(handler=command_init)
 
     runners = sub.add_parser("runners", help="list discoverable Wine and Proton runners")
