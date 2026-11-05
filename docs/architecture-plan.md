@@ -119,14 +119,43 @@ Never claim a runtime is self-contained until a clean-machine test confirms it h
 - Compare Wine and Proton viability for both build and run. Determine whether Proton can execute the build toolchain outside Steam with acceptable complexity.
 - Define the first supported distro and a measurable “works” checklist.
 
+#### Source review: upstream Windows build flow
+
+The current upstream `templates/game/build.bat` does not only compile code. It:
+
+1. Requires `assets/<GAME_XBE>`.
+2. Finds Visual Studio through `vswhere.exe`, enters its developer environment with `VsDevCmd.bat`, and checks for Clang, CMake, Ninja, and Git. If C++ Clang/CMake components are missing, it offers to launch the Visual Studio Installer elevated.
+3. Configures the Windows-only `release` CMake preset.
+4. Builds `xbe_symbols`, which detects XDK exports from the XBE and writes `config/game.toml` using the matching SDK signatures.
+5. Builds the actual Windows player and generated guest-code partitions.
+
+The template's CMake logic also stages Windows `clang.exe` and `lld-link.exe`, title configs, SDK layouts, and generated-code headers into `out/build/release/compiler`. The Windows player uses those files on the player's first launch to recompile guest code from the user's XBE. The player itself links Win32, D3D12, DXGI, XAudio2, and other Windows libraries. Dependencies such as Zydis, toml++, ImGui, and SDL3 are fetched by CMake.
+
+Consequences for Sidecar:
+
+- Running `build.bat` under Wine is not sufficient by itself. The prefix needs the Visual Studio Build Tools discovery/layout and a Windows-target compiler/linker plus Windows SDK libraries. The installer elevation flow is not a sound unattended bootstrap path under Wine.
+- The upstream `release` preset is conditioned on CMake detecting a Windows host. A Linux-side build driver cannot simply invoke that preset as-is.
+- Build and run should be separate backends. The run backend can launch an existing Windows player and its compiler payload under Wine/Proton. The build backend must reproduce the batch stages and provide a compatible Windows-target toolchain.
+- Do not silently use a Linux-native player build: that would change the requested artifact and return to the native-port work this project replaced.
+
+#### Recommended implementation direction
+
+1. Use a user-provided Windows installation/VM as the initial build backend and run the upstream `build.bat` unchanged there. This preserves the expected Visual Studio layout and Windows SDK/toolchain.
+2. Place the resulting Windows release files in a Linux title workspace (a shared folder can avoid manual copying), then let Sidecar initialize an isolated Wine prefix and run the Windows player. The title assets remain user-provided.
+3. Deliver this Wine run path first, including runner discovery, prefix setup, launch arguments, working directory, diagnostics, and logs. A user with an existing `.exe` should get value without configuring a VM.
+4. Consider automating VM build/handoff later (for example, through a guest agent or shared-folder contract). Only pursue Linux-hosted Windows cross-compilation if it materially improves the workflow; it requires a CMake/toolchain overlay and remains unproven.
+
+Primary source references: [upstream `build.bat`](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/build.bat), [upstream `CMakePresets.json`](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/CMakePresets.json), [upstream `XbeRecomp.cmake`](https://github.com/TGP482/XboxXBERecomp/blob/main/cmake/XbeRecomp.cmake), and [upstream game-template instructions](https://github.com/TGP482/XboxXBERecomp/blob/main/templates/game/README.md).
+
 **Exit criteria:** repeatable manual build and launch on a clean Linux install, or a documented blocker that narrows the supported workflow.
 
 ### 1. CLI MVP
 
 - Create a versioned title manifest and validation.
-- Implement `runners`, `doctor`, `init`, `build`, and `run`.
+- Implement `runners`, `doctor`, `init`, `setup`, `build`, and `run`.
 - Implement Wine runner discovery and per-title prefix management.
-- Invoke one documented XboxXBERecomp build pipeline and run its output.
+- Make `run` work for an existing Windows release before tying it to a Sidecar build.
+- Build support documents the Windows VM handoff and validates the resulting files; upstream build execution remains inside Windows for the first milestone.
 - Capture logs and preserve exit codes; add backup/reset commands.
 
 **Exit criteria:** a user can prepare the known test title, build it from their own files, and launch it without manually editing Wine prefixes.
