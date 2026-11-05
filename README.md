@@ -18,7 +18,7 @@ Early CLI implementation. It can register an existing Windows release, inspect W
 - Preserve compatibility with upstream XboxXBERecomp rather than maintaining a hard fork.
 - Keep generated game code, game assets, saves, and runtime state out of the toolkit distribution.
 - Keep title prefixes and configuration isolated from one another.
-- Make the runner selectable and diagnosable: Wine first, with Proton support where its runtime requirements can be met cleanly.
+- Make the runner selectable and diagnosable: Proton through UMU is the default for the D3D12 player; plain Wine remains an explicit fallback.
 - Treat compatibility as something demonstrated per title and runner version; do not promise that every game runs perfectly.
 - Start with a command-line MVP. Add a graphical manager only after the build and launch contracts are stable.
 

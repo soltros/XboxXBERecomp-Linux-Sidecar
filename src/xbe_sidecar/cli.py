@@ -222,7 +222,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("workspace", type=Path)
     init.add_argument("--name")
     init.add_argument("--exe", required=True, help="player executable, relative to workspace or absolute")
-    init.add_argument("--runner", choices=("wine", "proton"), default="wine")
+    init.add_argument("--runner", choices=("wine", "proton"), default="proton")
     init.add_argument("--runner-executable", help="explicit Wine binary or umu-run executable")
     init.add_argument("--proton-path", help="Proton path or codename for umu-run")
     init.add_argument("--umu-folders-path", help="base directory for umu's Proton/runtime files")

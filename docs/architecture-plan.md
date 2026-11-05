@@ -62,7 +62,7 @@ Do not put credentials or proprietary game data in the manifest. Validate paths 
 
 ### Runner adapter
 
-Define a narrow interface for `discover`, `install-or-select`, `create-prefix`, `run-command`, `diagnostics`, and `version`. Implement Wine first because its standalone invocation and prefix model form the simplest baseline. For standalone Proton, invoke it through `umu-run`, which provides the required Steam Linux Runtime environment outside Steam and manages a Proton/runtime cache. Do not call a Proton script directly and assume the Steam Runtime setup is unnecessary. See the [umu-run manual](https://github.com/Open-Wine-Components/umu-launcher/blob/main/docs/umu.1.scd).
+Define a narrow interface for `discover`, `install-or-select`, `create-prefix`, `run-command`, `diagnostics`, and `version`. Use Proton through `umu-run` as the default because the XboxXBERecomp player uses D3D12 and Proton includes VKD3D-Proton's D3D12-to-Vulkan translation. Keep plain Wine as an explicit fallback. UMU provides Proton's Steam Linux Runtime outside Steam and manages a Proton/runtime cache. Do not call a Proton script directly and assume the Steam Runtime setup is unnecessary. See the [umu-run manual](https://github.com/Open-Wine-Components/umu-launcher/blob/main/docs/umu.1.scd) and [VKD3D-Proton requirements](https://github.com/HansKristian-Work/vkd3d-proton/blob/master/README.md).
 
 Allow user-managed runners initially. The product can later offer downloadable runner bundles if licensing, update security, and runtime dependencies are settled.
 
@@ -91,7 +91,7 @@ The supervisor should set a controlled environment, set the correct Windows work
 
 The goal is an easy-to-run Linux package, but “single self-contained blob” is a packaging target to validate rather than an assumption. Wine and Proton have different dependency and redistribution models; Proton also commonly relies on Steam Runtime components. Evaluate these forms in order:
 
-1. **MVP:** native Sidecar package plus a user-selected, locally installed Wine runner.
+1. **MVP:** native Sidecar package plus UMU/Proton; retain system Wine as a selectable fallback.
 2. **Portable bundle:** Sidecar plus a supported Wine build and required runtime libraries, subject to license and distribution review.
 3. **Proton bundle/adapter:** use `umu-run` with a pinned Proton build and its runtime/container pieces, tested outside Steam on supported distributions.
 4. **Single-file convenience:** optional self-extracting archive or AppImage-like launcher that unpacks a versioned runtime into the user's data directory. Keep runtime updates separate from title data and verify downloaded artifacts.
