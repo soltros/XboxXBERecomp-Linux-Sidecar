@@ -27,6 +27,12 @@ from .runners import (
     runner_version,
     setup_command,
 )
+from .prefix_ops import (
+    PrefixOperationError,
+    create_prefix_backup,
+    reset_prefix,
+    safe_prefix_path,
+)
 
 
 class SidecarError(RuntimeError):
@@ -224,6 +230,44 @@ def command_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_backup(args: argparse.Namespace) -> int:
+    try:
+        data = load_manifest(args.workspace.expanduser())
+        output = create_prefix_backup(data, args.output)
+    except (ManifestError, PrefixOperationError) as exc:
+        raise SidecarError(str(exc)) from exc
+    except OSError as exc:
+        raise SidecarError(f"Could not back up prefix: {exc}") from exc
+    print(f"Prefix backup created: {output}")
+    return 0
+
+
+def command_reset(args: argparse.Namespace) -> int:
+    try:
+        data = load_manifest(args.workspace.expanduser())
+        prefix = safe_prefix_path(data)
+        if not prefix.exists():
+            print(f"Prefix does not exist; nothing to reset: {prefix}")
+            return 0
+        if not args.yes:
+            answer = input(
+                f"Delete this title's Windows prefix at {prefix}? Saves and settings stored there will be deleted. [y/N] "
+            )
+            if answer.strip().lower() not in {"y", "yes"}:
+                print("Reset cancelled.")
+                return 1
+        removed = reset_prefix(data)
+    except (ManifestError, PrefixOperationError) as exc:
+        raise SidecarError(str(exc)) from exc
+    except EOFError:
+        print("Reset cancelled: confirmation was not provided.", file=sys.stderr)
+        return 1
+    except OSError as exc:
+        raise SidecarError(f"Could not reset prefix: {exc}") from exc
+    print(f"Prefix removed: {removed}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xbe-sidecar",
@@ -262,6 +306,16 @@ def build_parser() -> argparse.ArgumentParser:
     bundle.add_argument("workspace", type=Path)
     bundle.add_argument("--output", required=True, type=Path, help="destination .tar.gz path")
     bundle.set_defaults(handler=command_bundle)
+
+    backup = sub.add_parser("backup", help="archive the title's Windows prefix")
+    backup.add_argument("workspace", type=Path)
+    backup.add_argument("--output", type=Path, help="destination .tar.gz path (default: Sidecar state directory)")
+    backup.set_defaults(handler=command_backup)
+
+    reset = sub.add_parser("reset", help="delete the title's Windows prefix")
+    reset.add_argument("workspace", type=Path)
+    reset.add_argument("--yes", action="store_true", help="skip the confirmation prompt")
+    reset.set_defaults(handler=command_reset)
     return parser
 
 

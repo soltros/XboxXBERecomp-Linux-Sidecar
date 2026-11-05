@@ -6,7 +6,7 @@ The Sidecar aims to provide a managed Wine or Proton environment, per-title conf
 
 ## Project status
 
-Early CLI implementation. It can register an existing Windows release, inspect Wine/UMU availability, initialize a per-title prefix, launch the player with logs, and package a staged release as a Linux launcher archive. Build in a Windows installation or VM using XboxXBERecomp's expected workflow; see [the quickstart](docs/quickstart.md), [packaging notes](docs/packaging.md), and [the architecture plan](docs/architecture-plan.md).
+Early CLI implementation. It can register an existing Windows release, inspect Wine/UMU availability, initialize a per-title prefix, launch the player with logs, back up/reset a prefix, and package a staged release as a Linux launcher archive. Build in a Windows installation or VM using XboxXBERecomp's expected workflow; see [the quickstart](docs/quickstart.md), [packaging notes](docs/packaging.md), and [the architecture plan](docs/architecture-plan.md).
 
 ## Intended workflows
 

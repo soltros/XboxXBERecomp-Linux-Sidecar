@@ -166,7 +166,7 @@ For the current Sidecar goal—build with XboxXBERecomp as-is in Windows and pac
 - Make `run` work for an existing Windows release before tying it to a Sidecar build.
 - Build support documents the Windows VM handoff and validates the resulting files; upstream build execution remains inside Windows for the first milestone.
 - Add a Linux archive builder for staged release files, excluding game assets and per-user state.
-- Capture logs and preserve exit codes; add backup/reset commands.
+- Capture logs and preserve exit codes; provide explicit prefix backup/reset commands.
 
 **Exit criteria:** a user can prepare the known test title, build it from their own files, and launch it without manually editing Wine prefixes.
 
