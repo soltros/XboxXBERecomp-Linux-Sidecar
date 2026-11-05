@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from .manifest import get_prefix_path
+from .manifest import get_prefix_path, resolve_workspace_path
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,9 @@ def runner_environment(data: dict, runner: Runner) -> dict[str, str]:
         proton_path = data["runner"].get("proton_path")
         if proton_path:
             env["PROTONPATH"] = str(Path(proton_path).expanduser())
+        umu_folders = data["runner"].get("umu_folders_path")
+        if umu_folders:
+            env["UMU_FOLDERS_PATH"] = str(resolve_workspace_path(data, umu_folders))
     return env
 
 

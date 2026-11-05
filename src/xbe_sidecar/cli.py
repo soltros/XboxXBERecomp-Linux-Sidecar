@@ -118,6 +118,7 @@ def command_init(args: argparse.Namespace) -> int:
             runner=args.runner,
             runner_executable=args.runner_executable,
             proton_path=args.proton_path,
+            umu_folders_path=args.umu_folders_path,
         )
     except ManifestError as exc:
         raise SidecarError(str(exc)) from exc
@@ -224,6 +225,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--runner", choices=("wine", "proton"), default="wine")
     init.add_argument("--runner-executable", help="explicit Wine binary or umu-run executable")
     init.add_argument("--proton-path", help="Proton path or codename for umu-run")
+    init.add_argument("--umu-folders-path", help="base directory for umu's Proton/runtime files")
     init.set_defaults(handler=command_init)
 
     runners = sub.add_parser("runners", help="list discoverable Wine and Proton runners")

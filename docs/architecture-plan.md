@@ -98,6 +98,8 @@ The goal is an easy-to-run Linux package, but “single self-contained blob” i
 
 Never claim a runtime is self-contained until a clean-machine test confirms it has no undeclared host dependencies. Do not bundle Microsoft's redistributables or proprietary game files without a clear redistribution right.
 
+The current UMU implementation uses XDG data directories for its Proton/runtime files and exposes `UMU_FOLDERS_PATH` to redirect its managed folders. This is a candidate for a preseeded per-title or shared runtime directory in the future bundle format; the Sidecar exposes that setting in the title manifest. An offline bundle still needs the matching UMU/Proton/Steam Runtime files and a clean-host dependency audit.
+
 ## Security and reliability requirements
 
 - Treat project paths, manifest values, XBE-derived filenames, and runner output as untrusted input.
