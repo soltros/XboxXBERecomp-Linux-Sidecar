@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -30,6 +33,21 @@ def create_manifest(
     if manifest.exists():
         raise ManifestError(f"{manifest} already exists")
 
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "title"
+    identity = hashlib.sha256(
+        f"{workspace.resolve()}\0{name}\0{executable}".encode("utf-8")
+    ).hexdigest()[:10]
+    data_root = f"$XDG_DATA_HOME/xbe-sidecar/{slug}-{identity}"
+    state_root = f"$XDG_STATE_HOME/xbe-sidecar/{slug}-{identity}"
+    executable_path = Path(executable).expanduser()
+    if executable_path.is_absolute():
+        try:
+            working_directory = executable_path.resolve().parent.relative_to(workspace.resolve()).as_posix()
+        except ValueError:
+            working_directory = str(executable_path.resolve().parent)
+    else:
+        working_directory = executable_path.parent.as_posix() or "."
+
     lines = [
         "[title]",
         f"name = {_toml_string(name)}",
@@ -45,11 +63,14 @@ def create_manifest(
         [
             "",
             "[prefix]",
-            'path = ".sidecar/prefix"',
+            f"path = {_toml_string(data_root + '/prefix')}",
+            "",
+            "[storage]",
+            f"state = {_toml_string(state_root)}",
             "",
             "[player]",
             f"executable = {_toml_string(executable)}",
-            'working_directory = "."',
+            f"working_directory = {_toml_string(working_directory)}",
             "arguments = []",
             "",
             "[environment]",
@@ -74,6 +95,7 @@ def load_manifest(path: Path) -> dict[str, Any]:
     prefix = data.get("prefix")
     player = data.get("player")
     environment = data.get("environment", {})
+    storage = data.get("storage", {})
     if not isinstance(title, dict) or not isinstance(title.get("name"), str):
         raise ManifestError("[title].name must be a string")
     if not isinstance(runner, dict) or runner.get("type") not in {"wine", "proton"}:
@@ -95,6 +117,10 @@ def load_manifest(path: Path) -> dict[str, Any]:
         isinstance(key, str) and isinstance(value, str) for key, value in environment.items()
     ):
         raise ManifestError("[environment] values must be strings")
+    if not isinstance(storage, dict) or (
+        "state" in storage and not isinstance(storage["state"], str)
+    ):
+        raise ManifestError("[storage].state must be a string")
 
     data["_manifest_path"] = manifest_path.resolve()
     data["_workspace"] = manifest_path.resolve().parent
@@ -102,12 +128,28 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 
 def resolve_workspace_path(data: dict[str, Any], value: str) -> Path:
-    path = Path(value).expanduser()
+    substitutions = {
+        "${XDG_DATA_HOME}": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")),
+        "${XDG_STATE_HOME}": os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")),
+        "$XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")),
+        "$XDG_STATE_HOME": os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")),
+    }
+    expanded = value
+    for key, replacement in substitutions.items():
+        expanded = expanded.replace(key, replacement)
+    path = Path(os.path.expandvars(expanded)).expanduser()
     return path.resolve() if path.is_absolute() else (data["_workspace"] / path).resolve()
 
 
 def get_prefix_path(data: dict[str, Any]) -> Path:
     return resolve_workspace_path(data, data["prefix"]["path"])
+
+
+def get_state_path(data: dict[str, Any]) -> Path:
+    storage = data.get("storage", {})
+    if isinstance(storage.get("state"), str):
+        return resolve_workspace_path(data, storage["state"])
+    return data["_workspace"] / ".sidecar"
 
 
 def get_player_path(data: dict[str, Any]) -> Path:

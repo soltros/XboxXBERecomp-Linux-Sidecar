@@ -14,6 +14,7 @@ from .manifest import (
     create_manifest,
     get_player_path,
     get_prefix_path,
+    get_state_path,
     get_working_directory,
     load_manifest,
 )
@@ -69,7 +70,7 @@ def _print_process(command: list[str], cwd: Path, env: dict[str, str], log_path:
 
 def _log_path(data: dict, operation: str) -> Path:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return data["_workspace"] / ".sidecar" / "logs" / f"{operation}-{stamp}.log"
+    return get_state_path(data) / "logs" / f"{operation}-{stamp}.log"
 
 
 def _get_runner(data: dict):
@@ -120,7 +121,8 @@ def command_init(args: argparse.Namespace) -> int:
         )
     except ManifestError as exc:
         raise SidecarError(str(exc)) from exc
-    (workspace / ".sidecar" / "logs").mkdir(parents=True, exist_ok=True)
+    data = load_manifest(manifest)
+    (get_state_path(data) / "logs").mkdir(parents=True, exist_ok=True)
     print(f"Created {manifest}")
     print("Next: xbe-sidecar doctor " + str(workspace))
     print("Then: xbe-sidecar setup " + str(workspace))
@@ -150,6 +152,7 @@ def command_doctor(args: argparse.Namespace) -> int:
     player = get_player_path(data)
     working = get_working_directory(data)
     prefix = get_prefix_path(data)
+    state = get_state_path(data)
     print(f"Sidecar:     {__version__}")
     print(f"Title:       {data['title']['name']}")
     print(f"Workspace:   {data['_workspace']}")
@@ -161,10 +164,11 @@ def command_doctor(args: argparse.Namespace) -> int:
     else:
         print("Runner path: MISSING")
     print(f"Prefix:      {prefix} ({'ready' if runner and prefix_ready(data, runner) else 'not initialized'})")
+    print(f"State:       {state}")
     print(f"Player:      {player} ({'found' if player.is_file() else 'MISSING'})")
     print(f"Working dir: {working} ({'found' if working.is_dir() else 'MISSING'})")
-    assets = data["_workspace"] / "assets"
-    compiler = data["_workspace"] / "compiler"
+    assets = working / "assets"
+    compiler = working / "compiler"
     print(f"Assets dir:  {assets} ({'found' if assets.is_dir() else 'not found'})")
     print(f"Compiler:    {compiler} ({'found' if compiler.is_dir() else 'not found'})")
     if data["runner"]["type"] == "proton":

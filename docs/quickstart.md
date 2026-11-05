@@ -16,7 +16,7 @@ xbe-sidecar run /path/to/title-release
 
 To use Proton, install `umu-launcher` and initialize with `--runner proton`. Sidecar uses `umu-run` so Proton can run outside Steam with the Steam Linux Runtime. If `umu-run` is not on `PATH`, set `UMU_RUN=/path/to/umu-run` or use `--runner-executable`. To pin a Proton build, add `--proton-path /path/to/Proton` (or a supported Proton codename). Otherwise umu selects its default Proton build and may download it and the required runtime on first launch.
 
-Each title gets a separate prefix in `.sidecar/prefix` and timestamped output logs in `.sidecar/logs`. The prefix can be deleted to reset that title's Windows state; this does not delete the game files or executable. Back up saves/settings stored inside the prefix before resetting it.
+Each title gets a separate prefix under `$XDG_DATA_HOME/xbe-sidecar/` and timestamped logs under `$XDG_STATE_HOME/xbe-sidecar/` (defaulting to `~/.local/share` and `~/.local/state`). Both paths are stored in `sidecar.toml` and can be changed. The prefix can be deleted to reset that title's Windows state; this does not delete the game files or executable. Back up saves/settings stored inside the prefix before resetting it.
 
 This workflow runs the Windows release through Wine/Proton. It is not a native Linux game executable. `umu-run` manages its Proton/runtime cache under the user's data directory. A portable bundle containing pinned runner and runtime files is planned separately and must be verified for redistribution rights and host-library requirements.
 
